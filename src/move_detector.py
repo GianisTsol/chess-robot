@@ -11,29 +11,6 @@ if not cap.isOpened():
 
 print("Press 'q' to quit.")
 
-empty_avg_colors = np.zeros((8, 8, 3))
-def get_square_avg_color(image, row, col, square_size):
-    """
-    Returns the average BGR color of a square on the top-down chessboard image.
-
-    Parameters:
-        image (np.ndarray): Top-down view of the chessboard.
-        row (int): Row index (0 at top).
-        col (int): Column index (0 at left).
-        square_size (int): Pixel size of one square.
-
-    Returns:
-        tuple: (B, G, R) average color of the square.
-    """
-    y_start = int(row * square_size)
-    y_end = int(y_start + square_size)
-    x_start = int(col * square_size)
-    x_end = int(x_start + square_size)
-
-    square = image[y_start:y_end, x_start:x_end]
-    avg_color = cv2.mean(square)[:3]  # (B, G, R)
-    return avg_color
-
 def square_has_piece(gray_img, square_coords, threshold=380):
     x, y, w, h = square_coords
     square = gray_img[y:y+h, x:x+w]
@@ -48,7 +25,6 @@ def square_has_piece(gray_img, square_coords, threshold=380):
     return edge_pixels > threshold
 
 o = False
-c = True
 M, dst_size = None, None
 
 while True:
@@ -113,7 +89,6 @@ while True:
 
 
         cv2.imshow("Top-Down Chessboard (Full)", gray)
-    c = False
     # Show camera with debug overlay
     cv2.imshow("Camera Feed with Chessboard Overlay", display)
 
