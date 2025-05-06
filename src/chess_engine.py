@@ -9,10 +9,10 @@ from move_detector import square_has_piece
 square_len_px = 50
 
 # Βάλε εδώ την πλήρη διαδρομή προς το Stockfish .exe
-STOCKFISH_PATH = r"C:\Users\micn\AppData\Local\Programs\Python\Python313\Lib\site-packages\stockfish"
+STOCKFISH_PATH = r"C:\path\to\stockfish\stockfish.exe"
 
 if not os.path.exists(STOCKFISH_PATH):
-    raise FileNotFoundError(f"Δεν βρέθηκε το Stockfish στο: {STOCKFISH_PATH}")
+    raise FileNotFoundError(f"Did not find stockfish in: {STOCKFISH_PATH}")
 
 # === Αρχική διάταξη πιονιών ===
 starting_board = [
@@ -72,7 +72,7 @@ if __name__ == "__main__":
     # Διάβασε εικόνα (π.χ. από warpPerspective)
     frame = cv2.imread("top_down_chessboard.jpg")
     if frame is None:
-        raise FileNotFoundError("Δεν βρέθηκε η εικόνα 'top_down_chessboard.jpg'")
+        raise FileNotFoundError("There is no image 'top_down_chessboard.jpg'")
     
     gray_top = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
@@ -89,14 +89,14 @@ if __name__ == "__main__":
 
     # Φόρτωσε σκακιέρα και μηχανή
     board = chess.Board(fen)
-    print("Σκακιέρα:\n", board)
+    print("Chessboard:\n", board)
 
     engine = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
     result = engine.play(board, chess.engine.Limit(time=1))
-    print("Η AI παίζει:", result.move)
+    print("AI is playing:", result.move)
 
     board.push(result.move)
-    print("Μετά την κίνηση:\n", board)
+    print("After the move:\n", board)
 
     engine.quit()
     cv2.waitKey(0)
