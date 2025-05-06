@@ -22,3 +22,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("EXITING")
         t1.join()
+    except Exception as e:
+        raise e

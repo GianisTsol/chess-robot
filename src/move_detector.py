@@ -6,7 +6,6 @@ class ChessboardDetector():
     def __init__(self, camera_index=2, model_path="chess_square_classifier.h5"):
         """Initialize the chessboard detector with camera and model settings."""
         # Configuration
-        super()
         self.chessboard_inner = (7, 7)  # Inner corners for 8x8 board
         self.square_len_px = 64         # Size of squares in final warped view
         self.board_size = 8             # 8x8 chessboard
