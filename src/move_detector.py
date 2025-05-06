@@ -26,6 +26,10 @@ class ChessboardDetector():
         self.frame_counter = 0
         self.detection_interval = 10  # Detect pieces every 10 frames instead of 100
 
+    def get_board_state(self):
+        """Get the current state of the chessboard."""
+        return self.board_state
+
     def order_points_clockwise(self, pts):
         """Order corners: [top-left, top-right, bottom-right, bottom-left]"""
         rect = np.zeros((4, 2), dtype="float32")
