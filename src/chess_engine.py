@@ -1,103 +1,61 @@
 import os
-import cv2
-import numpy as np
 import chess
-import chess.engine
-from move_detector import square_has_piece
+from stockfish import Stockfish
 
-# === Settings ===
-square_len_px = 50
 
-# Βάλε εδώ την πλήρη διαδρομή προς το Stockfish .exe
-STOCKFISH_PATH = r"C:\path\to\stockfish\stockfish.exe"
+class ChessGameManager():
+    def __init__(self, stockfish_path="stockfish", skill_level=5):
+        self.board = chess.Board()
 
-if not os.path.exists(STOCKFISH_PATH):
-    raise FileNotFoundError(f"Did not find stockfish in: {STOCKFISH_PATH}")
+        if not os.path.exists(stockfish_path):
+            raise FileNotFoundError(f"Did not find stockfish in: {stockfish_path}")
 
-# === Αρχική διάταξη πιονιών ===
-starting_board = [
-    ["b_rook", "b_knight", "b_bishop", "b_queen", "b_king", "b_bishop", "b_knight", "b_rook"],
-    ["b_pawn"] * 8,
-    ["empty"] * 8,
-    ["empty"] * 8,
-    ["empty"] * 8,
-    ["empty"] * 8,
-    ["w_pawn"] * 8,
-    ["w_rook", "w_knight", "w_bishop", "w_queen", "w_king", "w_bishop", "w_knight", "w_rook"]
-]
+        self.stockfish = Stockfish(path=stockfish_path)
+        self.previous_state = None  # 8x8 boolean board
 
-def initialize_board(gray_top, square_size):
-    board_state = [["empty" for _ in range(8)] for _ in range(8)]
-    for row in range(8):
-        for col in range(8):
-            x, y = col * square_size, row * square_size
-            if square_has_piece(gray_top, (x, y, square_size, square_size)):
-                board_state[row][col] = starting_board[row][col]
-    return board_state
+    def update_board_from_array(self, current_state):
+        """
+        Update game state based on 8x8 boolean board array (True=piece, False=empty).
+        """
+        if self.previous_state is None:
+            self.previous_state = current_state
+            return None  # No move yet
 
-def board_state_to_fen(board_state):
-    piece_map = {
-        "w_pawn": "P", "w_rook": "R", "w_knight": "N", "w_bishop": "B", "w_queen": "Q", "w_king": "K",
-        "b_pawn": "p", "b_rook": "r", "b_knight": "n", "b_bishop": "b", "b_queen": "q", "b_king": "k"
-    }
-    fen_rows = []
-    for row in board_state:
-        fen_row = ""
-        empty_count = 0
-        for piece in row:
-            if piece == "empty":
-                empty_count += 1
-            else:
-                if empty_count > 0:
-                    fen_row += str(empty_count)
-                    empty_count = 0
-                fen_row += piece_map.get(piece, "?")
-        if empty_count > 0:
-            fen_row += str(empty_count)
-        fen_rows.append(fen_row)
-    fen = "/".join(fen_rows) + " w KQkq - 0 1"
-    return fen
+        move = self._infer_move(self.previous_state, current_state)
+        self.previous_state = current_state
 
-def draw_board_state(image, board_state, square_size):
-    for row in range(8):
-        for col in range(8):
-            piece = board_state[row][col]
-            if piece != "empty":
-                x, y = col * square_size, row * square_size
-                center = (x + square_size // 2, y + square_size // 2)
-                cv2.putText(image, piece, center, cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 255, 0), 1)
-    return image
+        if move and chess.Move.from_uci(move) in self.board.legal_moves:
+            self.board.push_uci(move)
+            self.stockfish.set_position(self.board.fen())
+            response_move = self.stockfish.best_move()
+            self.board.push_uci(response_move)
+            return move, response_move
 
-if __name__ == "__main__":
-    # Διάβασε εικόνα (π.χ. από warpPerspective)
-    frame = cv2.imread("top_down_chessboard.jpg")
-    if frame is None:
-        raise FileNotFoundError("There is no image 'top_down_chessboard.jpg'")
-    
-    gray_top = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        return None
 
-    # Εντόπισε πιονάκια
-    board_state = initialize_board(gray_top, square_len_px)
+    def _infer_move(self, prev, curr):
+        """
+        Try to infer a move from the difference between two boolean arrays.
+        Returns a UCI string (like 'e2e4') or None if it fails.
+        """
+        from_square = None
+        to_square = None
 
-    # Σχεδίασε αποτελέσματα
-    output = draw_board_state(frame.copy(), board_state, square_len_px)
-    cv2.imshow("Detected Pieces", output)
+        for rank in range(8):
+            for file in range(8):
+                index = rank * 8 + file
+                if prev[rank][file] and not curr[rank][file]:
+                    from_square = chess.square(file, 7 - rank)
+                if not prev[rank][file] and curr[rank][file]:
+                    to_square = chess.square(file, 7 - rank)
 
-    # Μετατροπή σε FEN
-    fen = board_state_to_fen(board_state)
-    print("FEN:", fen)
+        if from_square is not None and to_square is not None:
+            return chess.Move(from_square, to_square).uci()
 
-    # Φόρτωσε σκακιέρα και μηχανή
-    board = chess.Board(fen)
-    print("Chessboard:\n", board)
+        return None
 
-    engine = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
-    result = engine.play(board, chess.engine.Limit(time=1))
-    print("AI is playing:", result.move)
+    def get_board_fen(self):
+        return self.board.fen()
 
-    board.push(result.move)
-    print("After the move:\n", board)
-
-    engine.quit()
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    def print_board(self):
+        print(self.board)
