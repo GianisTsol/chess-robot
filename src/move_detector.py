@@ -1,40 +1,51 @@
 import cv2
+import cv2 as cv
 import numpy as np
 
 # Setup
 chessboard_inner = (7, 7)  # Inner corners for 8x8 board
 square_len_px = 50         # Size of squares in final warped view
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(2)
 if not cap.isOpened():
     raise RuntimeError("Could not open webcam")
 
 print("Press 'q' to quit.")
 
-def square_has_piece(gray_img, square_coords, threshold=380):
-    x, y, w, h = square_coords
-    square = gray_img[y:y+h, x:x+w]
+
+def sobel(src_image, kernel_size):
+    grad_x = cv.Sobel(src_image, cv.CV_16S, 1, 0, ksize=kernel_size, scale=1,
+                      delta=0, borderType=cv.BORDER_DEFAULT)
+    grad_y = cv.Sobel(src_image, cv.CV_16S, 0, 1, ksize=kernel_size, scale=1,
+                      delta=0, borderType=cv.BORDER_DEFAULT)
+    abs_grad_x = cv.convertScaleAbs(grad_x)
+    abs_grad_y = cv.convertScaleAbs(grad_y)
+
+    grad = cv.addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0)
+
+    return grad
+
+calibrated_edges = np.zeros((8, 8, 1))
+
+def square_has_piece(gray_img, row, col, threshold=150):
+    x, y = row * square_len_px, col * square_len_px
+    square = gray_img[y:y+square_len_px, x:x+square_len_px]
     edges = cv2.Canny(square, 50, 150)
     edge_pixels = np.sum(edges > 0)
-    return edge_pixels > threshold
+    return edge_pixels - calibrated_edges[row][col] > threshold
 
 def is_corner_square(row, col):
     """Check if square is one of the four corners"""
     return (row == 0 and col == 0) or (row == 0 and col == 7) or \
            (row == 7 and col == 0) or (row == 7 and col == 7)
 
+
 def detect_chessboard_corners(gray):
-    """Robust chessboard corner detection with multiple attempts"""
     flags = cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_NORMALIZE_IMAGE
-    
-    # First attempt with standard parameters
     found, corners = cv2.findChessboardCorners(gray, chessboard_inner, flags)
-    
     if not found:
-        # Try with different parameters if first attempt fails
         flags += cv2.CALIB_CB_FAST_CHECK
         found, corners = cv2.findChessboardCorners(gray, chessboard_inner, flags)
-    
     if found:
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
         corners = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
@@ -45,6 +56,15 @@ valid_matrix = False
 M, dst_size = None, None
 last_valid_M = None  # Store last valid transformation matrix
 
+
+def calibrate_square_edges(img, row, col):
+    (x, y) = row * square_len_px, col * square_len_px
+    square = img[y:y+square_len_px, x:x+square_len_px]
+    edges = cv2.Canny(square, 50, 150)
+    edge_pixels = np.sum(edges > 0)
+    calibrated_edges[row][col] = edge_pixels
+
+cal = True
 while True:
     ret, frame = cap.read()
     if not ret:
@@ -54,7 +74,7 @@ while True:
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     gray = cv2.equalizeHist(gray)
     gray = cv2.GaussianBlur(gray, (5, 5), 0)
-    
+
     display = frame.copy()
     corners = detect_chessboard_corners(gray)
 
@@ -100,21 +120,23 @@ while True:
     if valid_matrix:
         top_down = cv2.warpPerspective(frame, M, dst_size)
         gray_top = cv2.cvtColor(top_down, cv2.COLOR_BGR2GRAY)
+        blur_image = cv.blur(gray_top,(3,3))
+
+        sobel_image = sobel(blur_image, 3)
         square_size = dst_size[0] // 8
         
         # Detect pieces, skipping corner squares if needed
-        for row in range(8):
-            for col in range(8):
-                if is_corner_square(row, col):
-                    continue  # Skip corner squares for detection
-                
-                x, y = col * square_size, row * square_size
-                has_piece = square_has_piece(gray_top, (x, y, square_size, square_size))
-                
+        for row in range(0, 8):
+            for col in range(0, 8):
+                if cal:
+                    calibrate_square_edges(sobel_image, row, col)
+                has_piece = square_has_piece(sobel_image, row, col)
+                x, y = row * square_len_px, col * square_len_px
+
                 if has_piece:
                     center = (x + square_size//2, y + square_size//2)
                     cv2.circle(top_down, center, square_size//4, (0, 0, 255), 2)
-        
+        cal = False
         # Draw grid lines
         for i in range(1, 8):
             cv2.line(top_down, (i*square_size, 0), (i*square_size, dst_size[1]), (0, 255, 0), 1)
