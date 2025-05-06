@@ -12,7 +12,7 @@ if __name__ == "__main__":
     t1.start()
     try:
         while True:
-            board_array = get_board_array()  # Your OpenCV output
+            board_array = detector.get_board_state()  # Your OpenCV output
             result = manager.update_board_from_array(board_array)
 
             if result:
