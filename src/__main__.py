@@ -1,5 +1,5 @@
+import cv2
 from . import move_detector
-
 from . import chess_engine
 
 import threading
@@ -12,13 +12,15 @@ if __name__ == "__main__":
     t1.start()
     try:
         while True:
-            board_array = detector.get_board_state()  # Your OpenCV output
-            result = manager.update_board_from_array(board_array)
+            if cv2.waitKey(1) & 0xFF == ord(" "):
+                board_array = detector.get_board_state()  # Your OpenCV output
+            
+                result = manager.update_board_from_array(board_array)
 
-            if result:
-                player_move, ai_move = result
-                print(f"Player moved: {player_move}, Stockfish responded with: {ai_move}")
-                manager.print_board()
+                if result:
+                    player_move, ai_move = result
+                    print(f"Player moved: {player_move}, Stockfish responded with: {ai_move}")
+                    manager.print_board()
     except KeyboardInterrupt:
         print("EXITING")
         t1.join()
