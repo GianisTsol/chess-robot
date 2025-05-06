@@ -9,7 +9,7 @@ from move_detector import square_has_piece
 square_len_px = 50
 
 # Βάλε εδώ την πλήρη διαδρομή προς το Stockfish .exe
-STOCKFISH_PATH = r"C:\Users\micn\AppData\Local\Programs\Python\Python313\Lib\site-packages\stockfish"
+STOCKFISH_PATH = r"C:\path\to\stockfish\stockfish.exe"
 
 if not os.path.exists(STOCKFISH_PATH):
     raise FileNotFoundError(f"Did not find stockfish in: {STOCKFISH_PATH}")
