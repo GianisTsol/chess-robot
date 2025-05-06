@@ -1,6 +1,7 @@
 from move_detector import square_has_piece
 import cv2
 import numpy as np
+import chess.pgn
 
 # Board and square size setup
 square_len_px = 50
@@ -38,6 +39,8 @@ def draw_board_state(image, board_state, square_size):
                 center = (x + square_size // 2, y + square_size // 2)
                 cv2.putText(image, piece, center, cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 255, 0), 1)
     return image
+
+
 
 # Example usage with a warped top-down board
 if __name__ == "__main__":
