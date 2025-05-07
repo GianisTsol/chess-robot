@@ -12,7 +12,7 @@ if __name__ == "__main__":
     t1.start()
     try:
         while True:
-            if cv2.waitKey(1) & 0xFF == ord(" "):
+            if detector.set_board_state_ready():
                 board_array = detector.get_board_state()  # Your OpenCV output
             
                 result = manager.update_board_from_array(board_array)
@@ -21,6 +21,7 @@ if __name__ == "__main__":
                     player_move, ai_move = result
                     print(f"Player moved: {player_move}, Stockfish responded with: {ai_move}")
                     manager.print_board()
+            detector.set_board_state_ready(False)  # Reset the board state ready flag
     except KeyboardInterrupt:
         print("EXITING")
         t1.join()

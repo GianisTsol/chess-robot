@@ -25,6 +25,13 @@ class ChessboardDetector():
         self.last_valid_M = None  # Store last valid transformation matrix
         self.frame_counter = 0
         self.detection_interval = 10  # Detect pieces every 10 frames instead of 100
+        self.board_state_ready = False  # Flag to indicate if board state is ready
+    
+    def set_board_state_ready(self, ready):
+        """Set the board state ready flag."""
+        print("Press 'space' to set board state ready.")    
+        cv2.waitKey(1) & 0xFF == ord(" ")
+        self.board_state_ready = True
 
     def get_board_state(self):
         """Get the current state of the chessboard."""
