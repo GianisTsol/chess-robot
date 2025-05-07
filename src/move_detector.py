@@ -30,9 +30,9 @@ class ChessboardDetector():
     def set_board_state_ready(self, ready):
         """Set the board state ready flag."""
         print("Press 'space' to set board state ready.")    
-        cv2.waitKey(1) & 0xFF == ord(" ")
-        self.board_state_ready = True
-
+        if cv2.waitKey(1) & 0xFF == ord(" "):
+            self.board_state_ready = True
+            
     def get_board_state(self):
         """Get the current state of the chessboard."""
         return self.board_state
