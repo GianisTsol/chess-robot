@@ -1,8 +1,7 @@
 import cv2
 from . import move_detector
 from . import chess_engine
-
-import threading
+import time
 if __name__ == "__main__":
     detector = move_detector.ChessboardDetector(camera_index=2)
     detector.start()
@@ -10,6 +9,7 @@ if __name__ == "__main__":
 
     try:
         while True:
+            time.sleep(0.1)
             if detector.consume():
                 board_array = detector.board_state
 
@@ -22,7 +22,7 @@ if __name__ == "__main__":
                 else:
                     print("no move!")
 
-            detector.update_game_state(manager.get_bool_array())
+                detector.update_game_state(manager.get_bool_array())
 
     except KeyboardInterrupt:
         print("EXITING")

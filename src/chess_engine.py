@@ -10,7 +10,7 @@ class ChessGameManager():
             raise FileNotFoundError(f"Did not find stockfish in: {stockfish_path}")
 
         self.engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
-        self.previous_state = None  # 8x8 boolean board
+        self.previous_state = self.get_bool_array()  # 8x8 boolean board
 
     def get_bool_array(self):
         # Create an 8x8 boolean array initialized to False
@@ -31,10 +31,7 @@ class ChessGameManager():
         if self.previous_state is None:
             self.previous_state = current_state.copy()
             return None
-
-        board_state = self.get_bool_array()
-        diff = self.previous_state.copy() != board_state
-
+        diff = self.previous_state.copy() != self.get_bool_array()
         if np.any(diff):
             coords = np.argwhere(diff)
             print("Differences found at:")
@@ -42,6 +39,10 @@ class ChessGameManager():
                 print(f"Wrong state - Position ({y}, {x})")
             self.previous_state = None
             return None
+
+        if not np.any(self.previous_state.copy() != current_state):
+            return None
+
         move = self._infer_move(self.previous_state, current_state)
         self.previous_state = current_state
         if move:
