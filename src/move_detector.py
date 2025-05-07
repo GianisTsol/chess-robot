@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from tensorflow.keras.models import load_model
+import threading
 
 class ChessboardDetector():
     def __init__(self, camera_index=2, model_path="chess_square_classifier.h5"):
@@ -15,6 +16,8 @@ class ChessboardDetector():
         if not self.cap.isOpened():
             raise RuntimeError(f"Could not open webcam at index {camera_index}")
 
+        self.thread = threading.Thread(target=self.run)
+        self.running = False
         # Model setup
         self.model = load_model(model_path)
         self.img_size = 64
@@ -26,16 +29,23 @@ class ChessboardDetector():
         self.frame_counter = 0
         self.detection_interval = 10  # Detect pieces every 10 frames instead of 100
         self.board_state_ready = False  # Flag to indicate if board state is ready
-    
-    def set_board_state_ready(self, ready):
-        """Set the board state ready flag."""
-        print("Press 'space' to set board state ready.")    
-        if cv2.waitKey(1) & 0xFF == ord(" "):
-            self.board_state_ready = True
-            
-    def get_board_state(self):
-        """Get the current state of the chessboard."""
-        return self.board_state
+
+    def start(self):
+        self.running = True
+        self.thread.start()
+
+    def stop(self):
+        self.running = False
+        self.thread.join()
+
+    def set_ready(self):
+        self.board_state_ready = True
+
+    def consume(self):
+        if self.board_state_ready:
+            self.board_state_ready = False
+            return True
+        return False
 
     def order_points_clockwise(self, pts):
         """Order corners: [top-left, top-right, bottom-right, bottom-left]"""
@@ -168,7 +178,7 @@ class ChessboardDetector():
         """Main processing loop."""
         print("Press 'q' to quit.")
         corners = None
-        while True:
+        while self.running:
             ret, frame = self.cap.read()
             if not ret:
                 break
@@ -189,6 +199,8 @@ class ChessboardDetector():
                 break
             elif k & 0xFF == ord('c'):
                 corners = self.detect_chessboard_corners(gray)
+            elif k & 0xFF == ord('p'):
+                self.set_ready()
 
             if corners is not None:
                 # Calculate perspective transform
