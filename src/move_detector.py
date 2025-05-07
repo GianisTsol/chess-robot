@@ -24,7 +24,10 @@ class ChessboardDetector():
         self.categories = ["empty", "piece"]  # Index 0 = empty, 1 = piece
 
         # State variables
-        self.board_state = [[False for _ in range(self.board_size)] for _ in range(self.board_size)]
+        self.board_state = np.zeros((8, 8), dtype=bool)
+
+        self.game_state = np.zeros((8, 8), dtype=bool) # game state from chess_engine to display on the cv2 view
+
         self.last_valid_M = None  # Store last valid transformation matrix
         self.frame_counter = 0
         self.detection_interval = 10  # Detect pieces every 10 frames instead of 100
@@ -166,6 +169,10 @@ class ChessboardDetector():
                     y, x = col * square_size, row * square_size
                     center = (x + square_size//2, y + square_size//2)
                     cv2.circle(result, center, square_size//4, (0, 0, 255), 2)
+                if self.game_state[row][col]:
+                    y, x = col * square_size, row * square_size
+                    center = (x + square_size//2, y + square_size//2)
+                    cv2.circle(result, center, square_size//6, (158, 0, 255), 2)
 
         # Draw grid lines
         for i in range(1, self.board_size):
@@ -173,6 +180,9 @@ class ChessboardDetector():
             cv2.line(result, (0, i*square_size), (self.board_size*square_size, i*square_size), (0, 255, 0), 1)
 
         return result
+
+    def update_game_state(self, state):
+        self.game_state = state
 
     def run(self):
         """Main processing loop."""
@@ -188,7 +198,7 @@ class ChessboardDetector():
             # Preprocess image
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             gray = cv2.equalizeHist(gray)
-            gray = cv2.GaussianBlur(gray, (11, 11), 0)
+            gray = cv2.GaussianBlur(gray, (5, 5), 0)
 
             has_valid_board = False
             outer_pts = None

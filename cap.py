@@ -59,8 +59,9 @@ def calibrate_square_edges(img, row, col):
     edge_pixels = np.sum(edges > 0)
     calibrated_edges[row][col] = edge_pixels
 
-cal = True
-kk = 0
+cal = False
+kk = 150
+corners = None
 while True:
     ret, frame = cap.read()
     if not ret:
@@ -71,7 +72,9 @@ while True:
     gray = cv2.equalizeHist(gray)
 
     display = frame.copy()
-    corners = detect_chessboard_corners(gray)
+    if cal:
+        cal = False
+        corners = detect_chessboard_corners(gray)
 
     if corners is not None:
         # Estimate outer corners
@@ -123,7 +126,10 @@ while True:
 
         # Detect pieces, skipping corner squares if needed
         f = cv2.waitKey(1)
+        if f & 0xFF == ord('c'):
+            cal = True
         if f & 0xFF == ord('e'):
+            print("GETTING EMPTY IMAGES")
             for row in range(2, 6):
                 for col in range(2, 6):
                     x, y = row * square_len_px, col * square_len_px
@@ -132,7 +138,7 @@ while True:
                     box = top_down[y:y + square_len_px, x:x + square_len_px]
 
                     # Save the box as an image
-                    cv2.imwrite(f"dataset/empty/chess_square_{kk}_{row}_{col}.png", box)
+                    cv2.imwrite(f"dataset/empty2/chess_square_{kk}_{row}_{col}.png", box)
             kk += 1
         if f & 0xFF == ord('t'):
             print("GETTING PIEECE IMAGES")
@@ -144,7 +150,7 @@ while True:
                     box = top_down[y:y + square_len_px, x:x + square_len_px]
 
                     # Save the box as an image
-                    cv2.imwrite(f"dataset/piece/chess_square_{kk}_{row}_{col}.png", box)
+                    cv2.imwrite(f"dataset/piece2/chess_square_{kk}_{row}_{col}.png", box)
             kk += 1
         cv2.imshow("Chessboard Detection", top_down)
     else:
@@ -152,8 +158,10 @@ while True:
                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
     cv2.imshow("Camera Feed", display)
-
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    f = cv2.waitKey(1)
+    if f & 0xFF == ord('c'):
+        cal = True
+    if f & 0xFF == ord('q'):
         break
 
 cap.release()

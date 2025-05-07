@@ -14,10 +14,16 @@ if __name__ == "__main__":
                 board_array = detector.board_state
 
                 result = manager.update_board_from_array(board_array)
+
                 if result:
                     player_move, ai_move = result
                     print(f"Player moved: {player_move}, Stockfish responded with: {ai_move}")
                     manager.print_board()
+                else:
+                    print("no move!")
+
+            detector.update_game_state(manager.get_bool_array())
+
     except KeyboardInterrupt:
         print("EXITING")
 

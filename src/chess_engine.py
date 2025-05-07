@@ -1,7 +1,6 @@
 import os
-import chess
-from stockfish import Stockfish
-
+import chess, chess.engine
+import numpy as np
 
 class ChessGameManager():
     def __init__(self, stockfish_path="stockfish", skill_level=5):
@@ -10,26 +9,49 @@ class ChessGameManager():
         if not os.path.exists(stockfish_path):
             raise FileNotFoundError(f"Did not find stockfish in: {stockfish_path}")
 
-        self.stockfish = Stockfish(path=stockfish_path)
+        self.engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
         self.previous_state = None  # 8x8 boolean board
+
+    def get_bool_array(self):
+        # Create an 8x8 boolean array initialized to False
+        piece_presence = np.zeros((8, 8), dtype=bool)
+
+        # Loop through all squares
+        for square in chess.SQUARES:
+            if self.board.piece_at(square):
+                rank = 7 - chess.square_rank(square)  # 0-indexed from top to bottom
+                file = chess.square_file(square)      # 0-indexed from left to right
+                piece_presence[rank][file] = True
+        return piece_presence
 
     def update_board_from_array(self, current_state):
         """
         Update game state based on 8x8 boolean board array (True=piece, False=empty).
         """
         if self.previous_state is None:
-            self.previous_state = current_state
-            return None  # No move yet
+            self.previous_state = current_state.copy()
+            return None
 
+        board_state = self.get_bool_array()
+        diff = self.previous_state.copy() != board_state
+
+        if np.any(diff):
+            coords = np.argwhere(diff)
+            print("Differences found at:")
+            for y, x in coords:
+                print(f"Wrong state - Position ({y}, {x})")
+            self.previous_state = None
+            return None
         move = self._infer_move(self.previous_state, current_state)
         self.previous_state = current_state
-
-        if move and chess.Move.from_uci(move) in self.board.legal_moves:
+        if move:
+            if not chess.Move.from_uci(move) in self.board.legal_moves:
+                print("illegal move put it back")
+                return None
             self.board.push_uci(move)
-            self.stockfish.set_position(self.board.fen())
-            response_move = self.stockfish.best_move()
-            self.board.push_uci(response_move)
-            return move, response_move
+            resp = self.engine.play(self.board, chess.engine.Limit(time=0.1))
+            self.board.push(resp.move)
+            return move, resp.move
 
         return None
 
