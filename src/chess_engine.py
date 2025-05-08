@@ -31,24 +31,34 @@ class ChessGameManager():
         if self.previous_state is None:
             self.previous_state = current_state.copy()
             return None
-        diff = self.previous_state.copy() != self.get_bool_array()
-        if np.any(diff):
-            coords = np.argwhere(diff)
-            print("Differences found at:")
-            for y, x in coords:
-                print(f"Wrong state - Position ({y}, {x})")
-            self.previous_state = None
+
+        # Detect differences between previous and current state
+        diff = self.previous_state != current_state
+        if not np.any(diff):
             return None
 
-        if not np.any(self.previous_state.copy() != current_state):
+        # Handle multiple differences
+        coords = np.argwhere(diff)
+        if len(coords) > 2:
+            print("Ambiguity detected: multiple differences found")
+            self.previous_state = current_state.copy()  # Reset to current state
             return None
 
+        # Infer the move
         move = self._infer_move(self.previous_state, current_state)
-        self.previous_state = current_state
+        self.previous_state = current_state.copy()  # Update to the current state
+
         if move:
-            if not chess.Move.from_uci(move) in self.board.legal_moves:
-                print("illegal move put it back")
+            try:
+                move_obj = chess.Move.from_uci(move)
+                if move_obj not in self.board.legal_moves:
+                    print("Illegal move, put it back")
+                    return None
+            except ValueError:
+                print("Invalid move format")
                 return None
+
+            # Push the move and get the engine's response
             self.board.push_uci(move)
             resp = self.engine.play(self.board, chess.engine.Limit(time=0.1))
             self.board.push(resp.move)
