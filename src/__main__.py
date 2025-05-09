@@ -3,9 +3,9 @@ from . import move_detector
 from . import chess_engine
 import time
 if __name__ == "__main__":
-    detector = move_detector.ChessboardDetector(camera_index=2)
+    detector = move_detector.ChessboardDetector(camera_index=1)
     detector.start()
-    manager = chess_engine.ChessGameManager(stockfish_path="/home/gtsol/Downloads/stockfish/stockfish-ubuntu-x86-64-avx2")  # adjust path
+    manager = chess_engine.ChessGameManager(stockfish_path="G:\My Drive\CODING\KORNHLIOS\stockfish\stockfish-windows-x86-64-avx2.exe")  # adjust path
 
     try:
         while True:
