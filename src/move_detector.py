@@ -260,7 +260,7 @@ class ChessboardDetector():
                 corners = self.detect_chessboard_corners(gray)
             elif k & 0xFF == ord('p'):
                 self.set_ready()
-            elif k & 0xFF == ord('m'):
+            elif k & 0xFF == ord('t'):
                 self.toggle_detection_method()
             elif k & 0xFF == ord('h'):
                 self.enter_hsv_calibration()

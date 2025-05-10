@@ -56,55 +56,33 @@ class ChessGameManager():
                 from_squares.append((rank, file))
             elif not self.previous_state[rank][file] and current_state[rank][file]:
                 to_squares.append((rank, file))
-
-        # Store current state before any move processing
+        #print(f"DEBUG: from_squares={from_squares}, to_squares={to_squares}")
         new_previous_state = current_state.copy()
-        
-        # Standard move (one piece moved from one square to another)
+
+        # Standard move or capture (one piece moved from one square to another)
         if len(from_squares) == 1 and len(to_squares) == 1:
             from_rank, from_file = from_squares[0]
             to_rank, to_file = to_squares[0]
             from_square = chess.square(from_file, 7 - from_rank)
             to_square = chess.square(to_file, 7 - to_rank)
-            
-            # Check for promotion (pawn moving to the last rank)
-            piece = self.board.piece_at(from_square)
-            is_promotion = False
-            
-            if piece and piece.piece_type == chess.PAWN:
-                if (piece.color == chess.WHITE and chess.square_rank(to_square) == 7) or \
-                (piece.color == chess.BLACK and chess.square_rank(to_square) == 0):
-                    is_promotion = True
-            
-            # Try to make a move
-            if is_promotion:
-                # Try promotion pieces in order: Queen, Rook, Bishop, Knight
-                for promotion_piece in [chess.QUEEN, chess.ROOK, chess.BISHOP, chess.KNIGHT]:
-                    move = chess.Move(from_square, to_square, promotion=promotion_piece)
-                    if move in self.board.legal_moves:
-                        self.board.push(move)
-                        self.previous_state = new_previous_state
-                        
-                        move_uci = move.uci()
-                        if self.engine:
-                            resp = self.engine.play(self.board, chess.engine.Limit(time=0.1))
-                            self.board.push(resp.move)
-                            return move_uci, resp.move
-                        return move_uci
+            move = chess.Move(from_square, to_square)
+            print(f"Trying move: {move.uci()} (from {from_squares[0]} to {to_squares[0]})")
+            #print(f"Legal moves at this point: {[m.uci() for m in self.board.legal_moves]}")
+            if move in self.board.legal_moves:
+                self.board.push(move)
+                self.previous_state = new_previous_state
+                move_uci = move.uci()
+                if self.engine:
+                    resp = self.engine.play(self.board, chess.engine.Limit(time=0.1))
+                    self.board.push(resp.move)
+                    return move_uci, resp.move
+                return move_uci
             else:
-                # Standard move
-                move = chess.Move(from_square, to_square)
-                if move in self.board.legal_moves:
-                    self.board.push(move)
-                    self.previous_state = new_previous_state
-                    
-                    move_uci = move.uci()
-                    if self.engine:
-                        resp = self.engine.play(self.board, chess.engine.Limit(time=0.1))
-                        self.board.push(resp.move)
-                        return move_uci, resp.move
-                    return move_uci
-        
+                print(f"Move {move.uci()} is not legal in current board state.")
+                #print(f"Legal moves are: {[m.uci() for m in self.board.legal_moves]}")
+                self.previous_state = new_previous_state
+                return None
+
         # Castling (king and rook moved)
         elif len(from_squares) == 2 and len(to_squares) == 2:
             # Try to identify king position
